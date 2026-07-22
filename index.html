@@ -214,7 +214,7 @@
     }
     .rule-strip {
       display: grid;
-      grid-template-columns: repeat(4, minmax(0, 1fr));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 8px;
     }
     .rule {
@@ -864,10 +864,11 @@
       setBadge("technicalBadge", latest.technicalScore);
 
       const rules = [
-        ["> 3", "100%"],
+        ["≥ 4", "100%"],
         ["1 至 3", "75%"],
-        ["-3 至 0", "25%"],
-        ["< -3", "0%"]
+        ["= 0", "50%"],
+        ["-3 至 -1", "25%"],
+        ["≤ -4", "0%"]
       ];
       $("ruleStrip").innerHTML = rules.map(([score, position]) => `<div class="rule"><strong>${position}</strong><span>总分 ${score}</span></div>`).join("");
     }
