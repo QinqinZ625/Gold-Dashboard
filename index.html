@@ -501,11 +501,27 @@
     }
     tr:last-child td { border-bottom: 0; }
 
+    #strategy-rules { scroll-margin-top: 150px; }
+    .method-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+    .method-card { border: 1px solid var(--line); border-radius: 8px; padding: 16px; background: var(--panel-soft); }
+    .method-group { color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+    .method-card h3, .method-position h3 { color: var(--navy); font-size: 15px; margin-bottom: 10px; }
+    .method-card p, .method-notes p { font-size: 13px; line-height: 1.8; }
+    .method-formula { background: #edf2f6; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px; }
+    .method-card ul { padding-left: 20px; margin: 8px 0 0; font-size: 13px; line-height: 1.9; }
+    .method-position { margin-top: 20px; }
+    .method-score { font-size: 14px; line-height: 1.8; margin-bottom: 12px; }
+    .method-position table { min-width: 0; }
+    .method-position th, .method-position td { text-align: left; white-space: normal; }
+    .method-notes { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); }
+    .method-notes p + p { margin-top: 6px; }
+
     .muted { color: var(--muted); }
     .good-text { color: var(--green); }
     .bad-text { color: var(--red); }
 
     @media (max-width: 1180px) {
+      .method-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .decision-grid,
       .backtest-grid {
         grid-template-columns: 1fr;
@@ -515,6 +531,7 @@
       }
     }
     @media (max-width: 760px) {
+      .method-grid { grid-template-columns: 1fr; }
       .topbar-inner {
         align-items: flex-start;
         flex-direction: column;
@@ -548,6 +565,7 @@
         <a href="#snapshot">当前结论</a>
         <a href="#signals">信号历史</a>
         <a href="#backtest">历史回测</a>
+        <a href="#strategy-rules">构建规则</a>
         <span class="badge" id="latestDate">--</span>
       </nav>
     </div>
@@ -578,9 +596,9 @@
             <div class="rule-strip" id="ruleStrip"></div>
           </div>
           <div class="score-grid">
-            <div class="score-box"><div class="score-label">基本面得分</div><div class="score-value" id="fundamentalScore">--</div><div class="score-note">货币政策 + 通胀预期</div></div>
+            <div class="score-box"><div class="score-label">基本面得分</div><div class="score-value" id="fundamentalScore">--</div><div class="score-note">利率预期 + 通胀预期</div></div>
             <div class="score-box"><div class="score-label">资金面得分</div><div class="score-value" id="flowScore">--</div><div class="score-note">SPDR ETF + 美元指数</div></div>
-            <div class="score-box"><div class="score-label">技术面得分</div><div class="score-value" id="technicalScore">--</div><div class="score-note">均线位置 + 均线趋势</div></div>
+            <div class="score-box"><div class="score-label">技术面得分</div><div class="score-value" id="technicalScore">--</div><div class="score-note">均线交叉 + 均线趋势</div></div>
             <div class="score-box"><div class="score-label">总得分</div><div class="score-value" id="totalScore">--</div><div class="score-note">决定最终仓位</div></div>
           </div>
         </div>
@@ -731,6 +749,97 @@
           </div>
         </aside>
       </section>
+      <section class="panel" id="strategy-rules" aria-labelledby="strategyRulesTitle">
+        <div class="panel-head">
+          <div>
+            <h2 class="panel-title" id="strategyRulesTitle">六个指标与仓位构建规则</h2>
+            <p class="panel-subtitle">按当前策略公式说明：先计算六项信号，再将总分映射为目标仓位</p>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="method-grid">
+            <article class="method-card">
+              <p class="method-group">01 · 基本面</p>
+              <h3>利率预期</h3>
+              <p class="method-formula">隐含利率 = 100 − FF.CBT 期货价格<br>利差 = 隐含利率 − 联邦基金目标利率区间中点</p>
+              <p>目标利率中点取策略日已生效区间的上下限均值。阈值 12.5 bp，即 0.125 个百分点。</p>
+              <ul>
+                <li>利差 ≤ −0.125 个百分点：<strong class="good-text">+1</strong></li>
+                <li>−0.125 &lt; 利差 &lt; +0.125：<strong>0</strong></li>
+                <li>利差 ≥ +0.125 个百分点：<strong class="bad-text">−1</strong></li>
+              </ul>
+            </article>
+            <article class="method-card">
+              <p class="method-group">02 · 基本面</p>
+              <h3>通胀预期</h3>
+              <p class="method-formula">5年通胀预期 = 5年名义美债收益率 − 5年 TIPS 实际收益率<br>变化 = 当日通胀预期 − 20个交易日前通胀预期</p>
+              <ul>
+                <li>20日变化 &lt; 0：<strong class="good-text">+1</strong></li>
+                <li>20日变化 = 0：<strong>0</strong></li>
+                <li>20日变化 &gt; 0：<strong class="bad-text">−1</strong></li>
+              </ul>
+              <p class="muted">当前策略将通胀预期下降记为正分、上升记为负分。</p>
+            </article>
+            <article class="method-card">
+              <p class="method-group">03 · 资金面</p>
+              <h3>SPDR ETF</h3>
+              <p class="method-formula">持仓吨数 = 金衡盎司数 × 0.0000311034768<br>变化 = 当日持仓吨数 − 20个交易日前持仓吨数</p>
+              <ul>
+                <li>20日增持：<strong class="good-text">+1</strong></li>
+                <li>20日持仓不变：<strong>0</strong></li>
+                <li>20日减持：<strong class="bad-text">−1</strong></li>
+              </ul>
+            </article>
+            <article class="method-card">
+              <p class="method-group">04 · 资金面</p>
+              <h3>美元指数</h3>
+              <p class="method-formula">变化 = 当日美元指数收盘值 − 20个交易日前收盘值</p>
+              <ul>
+                <li>20日变化 &lt; 0（美元走弱）：<strong class="good-text">+1</strong></li>
+                <li>20日变化 = 0：<strong>0</strong></li>
+                <li>20日变化 &gt; 0（美元走强）：<strong class="bad-text">−1</strong></li>
+              </ul>
+            </article>
+            <article class="method-card">
+              <p class="method-group">05 · 技术面</p>
+              <h3>均线交叉</h3>
+              <p class="method-formula">MA10 = 最近10个交易日金价收盘均值<br>MA20 = 最近20个交易日金价收盘均值</p>
+              <ul>
+                <li>MA10 &gt; MA20：<strong class="good-text">+1</strong></li>
+                <li>MA10 ≤ MA20（含相等）：<strong class="bad-text">−1</strong></li>
+              </ul>
+              <p class="muted">每天按两条均线的相对位置评分，无需当天发生上穿或下穿。</p>
+            </article>
+            <article class="method-card">
+              <p class="method-group">06 · 技术面</p>
+              <h3>均线趋势</h3>
+              <p class="method-formula">MA120 = 最近120个交易日金价收盘均值<br>趋势变化 = 当日 MA120 − 5个交易日前 MA120</p>
+              <ul>
+                <li>趋势变化 &gt; 0：<strong class="good-text">+1</strong></li>
+                <li>趋势变化 ≤ 0（含走平）：<strong class="bad-text">−1</strong></li>
+              </ul>
+            </article>
+          </div>
+          <div class="method-position">
+            <h3>总分如何转为仓位</h3>
+            <p class="method-score">六项信号等权相加：基本面 = 利率预期 + 通胀预期；资金面 = SPDR ETF + 美元指数；技术面 = 均线交叉 + 均线趋势。<br><strong>总分 = 基本面 + 资金面 + 技术面</strong>，范围为 −6 至 +6，直接决定黄金目标仓位。</p>
+            <table aria-label="总分与黄金目标仓位映射">
+              <thead><tr><th scope="col">总分区间</th><th scope="col">目标仓位</th><th scope="col">操作档位</th></tr></thead>
+              <tbody>
+                <tr><td>≥ +4</td><td><strong>100%</strong></td><td>满仓</td></tr>
+                <tr><td>+1 至 +3</td><td><strong>75%</strong></td><td>标准仓位</td></tr>
+                <tr><td>0</td><td><strong>50%</strong></td><td>中性半仓</td></tr>
+                <tr><td>−3 至 −1</td><td><strong>25%</strong></td><td>防守轻仓</td></tr>
+                <tr><td>≤ −4</td><td><strong>0%</strong></td><td>空仓</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="method-notes">
+            <p><strong>日期与窗口：</strong>以已完成的黄金真实观测日为策略日；20日、5日及均线窗口均按交易日计数。非黄金数据先对齐到黄金交易日，缺值时采用不晚于策略日的最近真实值，并保留实际来源日。</p>
+            <p><strong>信号与执行：</strong>+1 表示看多黄金，−1 表示看空黄金，0 表示中性；计算窗口不足时信号留空。收盘信号形成目标仓位，回测使用前一交易日仓位 × 当日黄金收盘收益率。<span id="methodCostNote">交易成本口径见回测指标。</span></p>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -845,6 +954,7 @@
       $("ruleBadge").textContent = data.rules.positionFormula;
       $("backtestRange").textContent = `${data.backtest.startDate} 至 ${data.backtest.endDate}`;
       $("executionBadge").textContent = Number(data.rules.transactionCostBps) === 0 ? "未计交易成本" : `${data.rules.transactionCostBps} bps`;
+      $("methodCostNote").textContent = Number(data.rules.transactionCostBps) === 0 ? "当前回测未计交易成本。" : `当前回测交易成本参数为 ${data.rules.transactionCostBps} bps。`;
 
       const scoreIds = [
         ["fundamentalScore", latest.fundamentalScore],
